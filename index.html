@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Lab2 - Benjamin Sykes</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+	    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.0/js/bootstrap.min.js" integrity="sha384-7aThvCh9TypR7fIc2HV4O/nFMVCBwyIUKL8XCtKE+8xgCgl/PQGuFsvShjr74PBp" crossorigin="anonymous"></script>
+       <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-PDle/QlgIONtM1aqA2Qemk5gPOE7wFq8+Em+G/hmo5Iq0CCmYZLv3fVRDJ4MMwEA" crossorigin="anonymous">
+
+        <style>
+            /* CSS RULES */
+            .container-fluid {
+                margin-top: 40px;
+            }
+            
+            .notification-alert {
+                margin: 15px 0;
+            }
+            
+            .buttons-group {
+                margin-left: 0;
+            }
+            
+            .form-btn {
+                margin: 10px 5px;
+            }
+            
+            .title {
+                color: #464646;
+                margin-bottom: 15px;
+            }
+            
+        </style>
+
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <h1 class="title">Event Registration Form</h1>
+                </div>
+            </div>
+            <form id="registration-form">
+              <div class="form-container">
+                  <div class="form-group row">
+                    <label for="inputInvitationID" class="col-sm-2 col-form-label">Invitation ID:</label>
+                    <div class="col-sm-10">
+                      <input type="number" class="form-control inputField" id="inputInvitationID" placeholder="Invitation ID">
+                    </div>
+                  </div>
+
+                  <div class="form-group row">
+                    <label for="inputName" class="col-sm-2 col-form-label">Your name:</label>
+                    <div class="col-sm-10">
+                      <input type="text" class="form-control inputField" id="inputName" placeholder="Your name">
+                    </div>
+                  </div>
+
+                  <div class="form-group row">
+                    <label for="inputCompany" class="col-sm-2 col-form-label">Company:</label>
+                    <div class="col-sm-10">
+                      <input type="text" class="form-control inputField" id="inputCompany" placeholder="Company name">
+                    </div>
+                  </div>
+
+                  <fieldset class="form-group">
+                    <div class="row">
+                      <legend class="col-form-label col-sm-2 pt-0">Type:</legend>
+                      <div class="col-sm-10">
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="companyType" id="companyType1" value="Sole Proprietorship" checked>
+                          <label class="form-check-label" for="companyType1">
+                            Sole proprietorship
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="companyType" id="companyType2" value="Partnership">
+                          <label class="form-check-label" for="companyType2">
+                            Partnership
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="companyType" id="companyType3" value="Corporation">
+                          <label class="form-check-label" for="companyType3">
+                            Corporation
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="companyType" id="companyType4" value="Other">
+                          <label class="form-check-label" for="companyType4">
+                            Other
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </fieldset>
+              </div>
+                
+              <div id="notify" class="alert alert-warning alert-dismissible fade show notification-alert" role="alert">
+                
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="buttons-group row">
+                <div class="form-btn"><button id="btn-register" class="btn btn-primary" type="button">Register</button></div>
+                <div class="form-btn"><button id="btn-check" class="btn btn-secondary" type="button">Check Registration</button></div>
+                <div class="form-btn"><button id="btn-delete" class="btn btn-warning" type="button">Delete Registration</button></div>
+              </div>
+            </form>
+        </div>
+        
+        <!-- App code -->
+        <script type="text/javascript">
+            let idb = window.indexedDB;
+            
+            var app = {
+                db: null,
+                
+                init: function() {
+                    // Create registrationDB with registration object store
+                    app.setupDatabase();
+                    
+                    $('#notify').hide();
+                    
+                    // Create Button Handlers
+                    $('#btn-register').on('click', function() {
+                        var data = {
+                            id: $('#inputInvitationID').val().trim(),
+                            name: $('#inputName').val().trim(),
+                            company: $('#inputCompany').val().trim(),
+                            type: $("input[name='companyType']:checked").val()
+                        };
+                        
+                        // Check valid input
+                        var validityResult = app.validate(data);
+                        
+                        if (!validityResult.valid) {
+                            var $alertErrors = ""
+                            var errorLen = validityResult.errors.length;
+                            for (var i=0; i < errorLen; i++) {
+                                // Add the errors to the alert
+                                $alertErrors += validityResult.errors[i] + "<br />";
+                            }
+                            
+                            // Display alert with errors
+                            $('#notify').append($alertErrors);
+                            $('#notify').show(400);
+                        } else {
+                            // Store the data in register object store.
+                            app.saveData(data);
+                        }
+                    });
+                    
+                    $('#btn-check').on('click', function() {
+                        var id = $('#inputInvitationID').val();
+                        var $notify = $('#notify');
+                        
+                        app.searchID(id).then(function(data) {
+                            if (id.length < 1) {
+                                $notify.text("Invitation ID cannot be empty");
+                            } else if (data == null) {
+                                $notify.text("Invitation ID not found!");
+                            } else {
+                                // Fill out fields
+                                $('#inputName').val(data.name);
+                                $('#inputCompany').val(data.company);
+                                $("input[name='companyType'][value='" +data.type.trim()+"']").prop('checked', true);
+
+                                // Notify user that we were able to find the registration
+                                $notify.text("Invitation was successfully retrieved!");
+                            }
+                        });
+                        
+                        $notify.show(400);
+                        $notify.delay(2000).hide(400);
+                        $notify.text('');
+                    });
+                    
+                    $('#btn-delete').on('click', function() {
+                        var $notify = $('#notify');
+                        var id = $('#inputInvitationID').val();
+                        
+                        // Check input
+                        if (id.length < 1) {
+                            $notify.text("Invitation ID cannot be empty");
+                            $notify.show(400);
+                        } else {
+                            // Delete the record if found!
+                            app.delete(id);
+                        }
+                        
+                        // Clear the form
+                        app.resetForm();
+                    });
+                    
+                    $('.form-container').on('click', function() {
+                        var $notifyAlert = $('#notify');
+                        $notifyAlert.text('');
+                        
+                        // Hide the alert
+                        $notifyAlert.hide(400);
+                    });
+                },
+                
+                validate: function(input) {
+                    var errors = [];
+                    
+                    if (input.id == null || input.id.length == 0) {
+                        errors.push("InvitationID cannot be empty");
+                    }
+                    
+                    if (input.name == null || input.name.length == 0 ) {
+                        errors.push("Your Name cannot be empty");
+                    }
+                    
+                    if (input.company == null || input.company.length == 0) {
+                        errors.push("Company Name cannot be empty");
+                    }
+                    
+                    return {
+                        valid: (errors.length == 0),
+                        errors: errors
+                    };
+                },
+                
+                saveData: function(data) {
+                    // Notice: we use here email as DB key!
+                    var registration={id:data.id, name:data.name, company:data.company, type:data.type};
+
+                    // Initiate a transaction
+                    var transaction = app.db.transaction(["registration"],"readwrite");
+
+                    var storeRequest=transaction.objectStore("registration").add(registration);
+
+                    var $notify = $('#notify');
+                    storeRequest.onsuccess =function() {
+                        $notify.text("Registration Info Saved");
+                        $notify.show(400);
+                        
+                        $notify.delay(2000).hide(400);
+                    };
+
+                    storeRequest.onerror=function() {
+                         $notify.text("Database Error: cannot save registration Info. Most likely the invitation ID already exists..");
+                        $notify.show(400);
+                    };
+                },
+                
+                setupDatabase: function() {
+                    // Check if indexedDB is supported on this platform
+                    if (!('indexedDB' in window)) {
+                        return;
+                    }
+                    
+                    var openRequest = idb.open('registrationDB', 1);
+                    
+                    openRequest.onupgradeneeded = function(event) {
+                        app.db = openRequest.result;
+                        if (!app.db.objectStoreNames.contains("registration")) {
+                            app.db.createObjectStore("registration", {keyPath:"id"});
+                        }
+                    };
+                    openRequest.onsuccess=function(event) {
+                        app.db = openRequest.result;
+                    };
+
+                    openRequest.onerror=function(event) {
+                        // Error occurred
+                    };
+                },
+                
+                searchID: function(id) {
+                    return new Promise(function(resolve, reject) {
+                        if (id.length < 1) {
+                            resolve(null);
+                        } else {
+                             var storeRequest=app.db.transaction(["registration"],"readwrite").objectStore("registration").get(id);
+
+                             storeRequest.onsuccess=function() {
+                               if ((storeRequest.result) && ("id" in storeRequest.result)) {
+                                    resolve({
+                                        name: storeRequest.result.name,
+                                        company: storeRequest.result.company,
+                                        type: storeRequest.result.type
+                                    });
+                               } else {
+                                    resolve(null);
+                               };
+                             };
+                        }
+                    });
+                },
+                
+                delete: function(id) {
+                    var $notify = $('#notify');
+                    var transaction = app.db.transaction(["registration"], "readwrite");
+
+                    var objectStore = transaction.objectStore("registration");
+                    var objectStoreRequest = objectStore.delete(id);
+                    
+                    objectStoreRequest.onsuccess = function(event) {
+                        $notify.text("Invitation was successfully deleted!");
+                    };
+                    
+                    // Show the alert to the user
+                    $notify.show(400);
+                        
+                    $notify.delay(2000).hide(400);
+                    $notify.text('');
+                },
+                
+                resetForm: function() {
+                    document.getElementById('registration-form').reset();
+                }
+            };
+            
+            document.addEventListener('DOMContentLoaded', app.init, false);
+        </script>
+    </body>
+</html>
